@@ -6,6 +6,7 @@ import hashlib
 import os
 import re
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 import pandas as pd
@@ -47,10 +48,12 @@ st.set_page_config(
 
 
 def _hydrate_env_from_streamlit_secrets() -> None:
-    """Streamlit Community Cloud의 Secrets는 os.environ에 주입되지 않음 → LangChain/OpenAI 호환용.
+    """Secrets → OPENAI_API_KEY 등 표준 환경 변수 이름으로 맞춤.
 
-    로컬에는 secrets.toml이 없을 수 있음. 이때 st.secrets 접근은 첫 get/__getitem__에서
-    StreamlitSecretNotFoundError(FileNotFoundError)가 나므로 전체를 한 번에 감싼다.
+    - Streamlit은 최상위 스칼라 키만 os.environ에 같은 이름으로 넣는다.
+      (`openai_api_key`만 있으면 OPENAI_API_KEY는 비어 있을 수 있음.)
+    - `[openai]` 섹션 값은 AttrDict(Mapping)이며 `dict`가 아니므로 Mapping으로 읽어야 한다.
+    - secrets.toml이 없으면 StreamlitSecretNotFoundError → 무시.
     """
 
     def _set_if_empty(env_name: str, value: object | None) -> None:
@@ -65,23 +68,45 @@ def _hydrate_env_from_streamlit_secrets() -> None:
 
     try:
         sec = st.secrets
-        # 최상위 키 (앱 UI에서 쓰는 이름과 동일하게 두는 것을 권장)
+
         _set_if_empty("OPENAI_API_KEY", sec.get("OPENAI_API_KEY"))
         _set_if_empty("OPENAI_API_KEY", sec.get("openai_api_key"))
+        _set_if_empty("OPENAI_API_KEY", sec.get("OPENAI_KEY"))
         _set_if_empty("NEWS_API_KEY", sec.get("NEWS_API_KEY"))
         _set_if_empty("NEWS_API_KEY", sec.get("NEWSAPI_API_KEY"))
         _set_if_empty("NEWS_API_KEY", sec.get("news_api_key"))
         _set_if_empty("NEWSAPI_API_KEY", sec.get("NEWSAPI_API_KEY"))
 
-        # TOML 섹션 예: [openai] \n api_key = "sk-..."
-        openai_sec = sec.get("openai")
-        if isinstance(openai_sec, dict):
-            _set_if_empty(
-                "OPENAI_API_KEY",
-                openai_sec.get("api_key") or openai_sec.get("API_KEY"),
-            )
+        for _sect in ("openai", "OPENAI"):
+            sub = sec.get(_sect)
+            if isinstance(sub, Mapping):
+                _set_if_empty(
+                    "OPENAI_API_KEY",
+                    sub.get("api_key")
+                    or sub.get("API_KEY")
+                    or sub.get("openai_api_key"),
+                )
+
+        # 섹션 이름이 임의여도 api_key 키가 있으면 사용
+        if not (os.getenv("OPENAI_API_KEY") or "").strip():
+            try:
+                for _k, v in sec.items():
+                    if isinstance(v, Mapping):
+                        ak = v.get("api_key") or v.get("API_KEY")
+                        if ak and str(ak).strip():
+                            _set_if_empty("OPENAI_API_KEY", ak)
+                            break
+            except Exception:
+                pass
+
+        # Streamlit이 이미 넣은 대체 이름 → 표준 이름으로 복사
+        if not (os.getenv("OPENAI_API_KEY") or "").strip():
+            for alt in ("openai_api_key", "OPENAI_KEY", "open_ai_api_key"):
+                raw = (os.getenv(alt) or "").strip()
+                if raw:
+                    os.environ["OPENAI_API_KEY"] = raw
+                    break
     except (OSError, FileNotFoundError):
-        # StreamlitSecretNotFoundError → FileNotFoundError 서브클래스
         return
     except Exception:
         return
@@ -404,6 +429,9 @@ st.markdown(
     "</div>",
     unsafe_allow_html=True,
 )
+
+# UI 이후 한 번 더: Cloud에서 secrets 마운트 타이밍·스크립트 순서 이슈 대비
+_hydrate_env_from_streamlit_secrets()
 
 if not (os.getenv("OPENAI_API_KEY") or "").strip():
     st.error(
