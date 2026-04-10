@@ -45,6 +45,46 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+
+def _hydrate_env_from_streamlit_secrets() -> None:
+    """Streamlit Community Cloud의 Secrets는 os.environ에 주입되지 않음 → LangChain/OpenAI 호환용."""
+    try:
+        sec = st.secrets
+    except Exception:
+        return
+
+    def _set_if_empty(env_name: str, value: object | None) -> None:
+        if value is None:
+            return
+        s = str(value).strip()
+        if not s:
+            return
+        if (os.getenv(env_name) or "").strip():
+            return
+        os.environ[env_name] = s
+
+    # 최상위 키 (앱 UI에서 쓰는 이름과 동일하게 두는 것을 권장)
+    _set_if_empty("OPENAI_API_KEY", sec.get("OPENAI_API_KEY"))
+    _set_if_empty("OPENAI_API_KEY", sec.get("openai_api_key"))
+    _set_if_empty("NEWS_API_KEY", sec.get("NEWS_API_KEY"))
+    _set_if_empty("NEWS_API_KEY", sec.get("NEWSAPI_API_KEY"))
+    _set_if_empty("NEWS_API_KEY", sec.get("news_api_key"))
+    _set_if_empty("NEWSAPI_API_KEY", sec.get("NEWSAPI_API_KEY"))
+
+    # TOML 섹션 예: [openai] \\n api_key = "sk-..."
+    try:
+        openai_sec = sec.get("openai")
+        if isinstance(openai_sec, dict):
+            _set_if_empty(
+                "OPENAI_API_KEY",
+                openai_sec.get("api_key") or openai_sec.get("API_KEY"),
+            )
+    except Exception:
+        pass
+
+
+_hydrate_env_from_streamlit_secrets()
+
 # Tailwind Plus 마케팅 블록 느낌(타이포·여백·카드·차분한 톤)을 참고한 커스텀 테마 — UI 자산은 복사하지 않음.
 # 주의: st.markdown의 unsafe_allow_html는 <style>을 제거한 뒤 내용만 텍스트로 남겨 화면에 CSS가 그대로 노출될 수 있음.
 # Streamlit 1.56+는 st.html(…)<style>만 있을 때 이벤트 컨테이너로 보내 전역 스타일을 적용함.
@@ -362,7 +402,11 @@ st.markdown(
 )
 
 if not (os.getenv("OPENAI_API_KEY") or "").strip():
-    st.error("**OPENAI_API_KEY**가 필요합니다. 환경에 키를 설정한 뒤 페이지를 새로고침하세요.")
+    st.error(
+        "**OPENAI_API_KEY**가 필요합니다. 로컬은 `.env`, **Streamlit Cloud**는 "
+        "**Manage app → Secrets**에 `OPENAI_API_KEY = \"sk-...\"` 형식으로 넣은 뒤 "
+        "**Reboot** 하거나 페이지를 새로고침 하세요."
+    )
     st.stop()
 
 
