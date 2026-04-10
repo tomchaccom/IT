@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PRD · IT 뉴스 맞춤 요약 에이전트 (LangGraph + Streamlit)</title>
+  <style>
+    :root {
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #e2e8f0;
+      --accent: #0d9488;
+      --bg: #f8fafc;
+      --card: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      line-height: 1.6;
+      margin: 0;
+      padding: 2rem 1.25rem 3rem;
+      background: var(--bg);
+    }
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--card);
+      padding: 2.5rem 2.75rem 3rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+    }
+    h1 {
+      font-size: 1.65rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.35rem;
+      border-bottom: 3px solid var(--accent);
+      padding-bottom: 0.75rem;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+    h2 {
+      font-size: 1.15rem;
+      margin: 2rem 0 0.65rem;
+      color: var(--text);
+      border-left: 4px solid var(--accent);
+      padding-left: 0.65rem;
+    }
+    h3 {
+      font-size: 1rem;
+      margin: 1.35rem 0 0.45rem;
+      color: #334155;
+    }
+    p, li { font-size: 0.95rem; color: #334155; }
+    ul { margin: 0.35rem 0 0.75rem; padding-left: 1.25rem; }
+    li { margin: 0.25rem 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 0.75rem 0 1rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.55rem 0.65rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #f1f5f9; font-weight: 600; }
+    .tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      background: #ccfbf1;
+      color: #115e59;
+      font-weight: 600;
+      margin-right: 0.35rem;
+    }
+    .note {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      margin: 1rem 0;
+    }
+    .interview {
+      background: #ecfeff;
+      border: 1px solid #99f6e4;
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      font-size: 0.92rem;
+      margin: 1rem 0 1.25rem;
+      color: #134e4a;
+    }
+    code { font-size: 0.88em; background: #f1f5f9; padding: 0.1em 0.35em; border-radius: 4px; }
+    .diagram {
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.1rem;
+      font-family: ui-monospace, "Cascadia Code", monospace;
+      font-size: 0.78rem;
+      line-height: 1.45;
+      overflow-x: auto;
+      margin: 0.75rem 0 1rem;
+      color: #1e293b;
+    }
+    .footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.85rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <article class="wrap">
+    <h1>제품 요구사항 문서 (PRD)</h1>
+    <p class="meta">
+      <strong>제품명:</strong> IT 뉴스 트렌드 · 관심사 맞춤 요약 에이전트<br />
+      <strong>문서 버전:</strong> 1.2 · <strong>기준일:</strong> 2026-04-10<br />
+      <span class="tag">Seed 기반</span>
+      <span class="tag">인터뷰 반영</span>
+      <span class="tag">MVP</span>
+      <span class="tag">410ai</span>
+    </p>
+
+    <div class="interview">
+      <strong>인터뷰 · 핵심 요청(oOo interview):</strong>
+      LangGraph로 <strong>여러 도구</strong>를 쓰고, <strong>중간 결과에 따른 분기·반복</strong>이 있는 AI 에이전트 워크플로를
+      <strong>Streamlit</strong>으로 구현한다. <strong>그래프 구조</strong>와 <strong>에이전트 패턴</strong>을 제품 단계에서 명확히 기획한다.
+    </div>
+
+    <h2>1. 개요</h2>
+    <p>
+      공개 <strong>RSS·IT 뉴스 피드</strong>를 수집하고, 사용자의 <strong>구조화된 관심사</strong>(역할·기술 스택·관심 토픽)와의 관련도를 계산한다.
+      관련도가 낮으면 <strong>워크플로 분기</strong>로 피드 범위를 확장한 뒤 <strong>동일 수집 노드로 루프</strong>하여 재수집한다(MVP는 단일 확장 라운드).
+      정렬·점수가 확정되면 <strong>한국어 제목·요약 정규화</strong>(LLM 일괄 처리)를 거친 다음, <strong>LangGraph ReAct</strong> 서브그래프에서
+      도구를 호출하며 근거를 확인하고 <strong>한국어</strong> 트렌드·맞춤 요약을 제공한다.
+      클라이언트는 <strong>Streamlit</strong> 단일 엔트리 앱으로 제공하며, 그래프 스트리밍으로 진행 상태를 노출한다.
+    </p>
+
+    <h2>2. LangGraph 그래프 구조 · 에이전트 패턴 기획</h2>
+    <p>
+      본 절은 인터뷰에서 요구한 「다중 도구 · 중간 결과 분기/반복 · Streamlit 연동」을 만족시키기 위한
+      <strong>토폴로지</strong>와 <strong>패턴 선택 근거</strong>를 정의한다.
+    </p>
+
+    <h3>2.1 설계 원칙</h3>
+    <ul>
+      <li><strong>상위 그래프</strong>: 데이터 수집·점수화·정책 분기·(선택) 전처리는 <strong>결정적·반복 가능한 노드</strong>로 둔다.</li>
+      <li><strong>조건부 분기</strong>: 중간 상태(예: <code>max_match_score</code>, <code>scope_expanded</code>)만으로 다음 노드를 고른다.</li>
+      <li><strong>반복(루프)</strong>: 저매칭이면 피드 집합을 넓힌 뒤 <strong>수집 노드로 되돌아가</strong> 같은 파이프라인을 한 번 더 탄다.</li>
+      <li><strong>ReAct 서브그래프</strong>: 자유 기획 요약·역할 수행은 <code>create_react_agent</code>로 캡슐화하고, 상태 스키마로 상위와 동일한 컨텍스트를 공유한다.</li>
+      <li><strong>도구</strong>: 외부 검색이 아니라 <strong>이미 수집된 상태</strong>(기사 목록·프로필)를 읽는 도구 중심으로 환각을 줄인다(상태 주입).</li>
+    </ul>
+
+    <h3>2.2 MVP 노드·엣지 (구현 기준: <code>streamlit_app/workflow.py</code>)</h3>
+    <pre class="diagram">START
+  → ingest_rss          (다중 피드 HTTP 수집·중복 제거)
+  → score_articles      (프로필 대비 관련도·정렬)
+  → [조건] route_after_score
+        • (최고 관련도 &lt; 임계값) ∧ (아직 피드 미확장)
+              → expand_scope → **루프** → ingest_rss
+        • 그 외
+              → localize_articles (상위 N건 한국어 제목·요약)
+              → prepare_react     (사용자 메시지 시드)
+              → react_agent       (ReAct: 도구 루프)
+              → END</pre>
+    <p>
+      <strong>분기 조건</strong>은 코드상 <code>MATCH_THRESHOLD</code>와 <code>scope_expanded</code> 플래그로 단순화한다.
+      확장 후에도 임계값 미만이면 추가 루프 없이 다음 단계로 진행(MVP 정책).
+    </p>
+
+    <h3>2.3 상태(Shared State)와 도구의 역할</h3>
+    <table>
+      <thead>
+        <tr><th>구분</th><th>역할</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>공유 상태</td>
+          <td><code>articles</code>, <code>article_scores</code>, <code>user_profile</code>, <code>feed_urls</code>, <code>branch_events</code>, <code>tool_trace</code>, ReAct용 <code>messages</code></td>
+        </tr>
+        <tr>
+          <td>도구 (ReAct)</td>
+          <td>예: 관련도 순 헤드라인 조회, 사용자 관심사 프로필 문자열 조회 — 모두 <strong>InjectedState</strong>로 그래프 상태를 읽음</td>
+        </tr>
+        <tr>
+          <td>Streamlit</td>
+          <td><code>graph.stream(..., stream_mode="values")</code>로 노드 진행에 맞춰 <code>tool_trace</code>·분기 안내·메시지를 갱신</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>2.4 패턴 요약</h3>
+    <table>
+      <thead>
+        <tr><th>패턴</th><th>적용</th><th>목적</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>조건부 엣지</td><td><code>score_articles</code> 이후</td><td>중간 결과(관련도·확장 여부)에 따른 분기</td></tr>
+        <tr><td>루프백</td><td><code>expand_scope</code> → <code>ingest_rss</code></td><td>범위 확장 후 재수집·재점수화</td></tr>
+        <tr><td>ReAct 서브그래프</td><td><code>react_agent</code> 노드</td><td>LLM이 도구를 여러 번 호출하며 최종 한국어 큐레이션 생성</td></tr>
+        <tr><td>전처리 LLM 노드</td><td><code>localize_articles</code></td><td>다국어 RSS를 사용자-facing 한국어로 통일(ReAct 입력 품질 향상)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2.5 후속 확장 아이디어 (비-MVP)</h3>
+    <ul>
+      <li>임계값 미만 시 다회 확장 또는 키워드·기간 완화 노드 추가.</li>
+      <li>독립 서브그래프 병렬 실행(예: 출처별 요약 병합).</li>
+      <li>휴먼 인더 루프: 확장 전 사용자 확인 노드.</li>
+    </ul>
+
+    <h2>3. 비전 · 목표</h2>
+    <h3>3.1 제품 비전</h3>
+    <p>IT 뉴스 홍수 속에서 사용자의 직무·기술 관점에 맞는 신호만 빠르게 요약·연결해 준다.</p>
+    <h3>3.2 핵심 목표</h3>
+    <ul>
+      <li>RSS 기반으로 <strong>API 키 의존을 최소화</strong>한 뉴스 수집.</li>
+      <li><strong>관심사 대비 저매칭</strong> 시 자동으로 <strong>검색 범위(피드) 확장</strong>을 정책에 따라 한 번까지 수행한다.</li>
+      <li>ReAct로 <strong>다중 도구</strong>를 사용하고, UI에서 <strong>도구 타임라인·분기 이유</strong>를 노출해 신뢰도와 설명 가능성을 확보한다.</li>
+      <li>LangGraph 상위 그래프에서 <strong>분기·루프</strong>를 두어 중간 결과에 따른 동작을 제품 요구사항 수준에서 설명 가능하게 한다.</li>
+      <li>모든 사용자 대면 콘텐츠는 <strong>한국어 위주</strong>로 통일한다.</li>
+    </ul>
+
+    <h2>4. 사용자 · 시나리오</h2>
+    <h3>4.1 주요 사용자</h3>
+    <p>IT 업계 종사자 또는 학습자로, 특정 스택·토픽에 맞춰 뉴스를 걸러 요약받고 싶은 사람.</p>
+    <h3>4.2 대표 사용자 스토리</h3>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>스토리</th><th>비고</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>US-1</td>
+          <td>역할·스택·토픽을 입력하고 한 번의 실행으로 최신 IT 뉴스 기반 요약을 받고 싶다.</td>
+          <td>구조화 입력</td>
+        </tr>
+        <tr>
+          <td>US-2</td>
+          <td>내 관심사와 뉴스의 연결이 약할 때, 시스템이 범위를 넓혀 다시 시도하는 것을 이해하고 싶다.</td>
+          <td>분기·루프 UI</td>
+        </tr>
+        <tr>
+          <td>US-3</td>
+          <td>에이전트가 어떤 도구를 썼는지 타임라인으로 보고 싶다.</td>
+          <td>ReAct 추적</td>
+        </tr>
+        <tr>
+          <td>US-4</td>
+          <td>요약에 근거가 된 기사로 이동해 원문을 읽고 싶다.</td>
+          <td>제목·링크</td>
+        </tr>
+        <tr>
+          <td>US-5</td>
+          <td>읽은 흐름과 관심사에 맞춰 인프런에서 이어서 배울 강의·검색을 추천받고 싶다.</td>
+          <td><code>get_inflearn_learning_suggestions</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. 범위</h2>
+    <h3>5.1 MVP 포함</h3>
+    <ul>
+      <li><code>streamlit run</code> 단일 엔트리.</li>
+      <li>기본·확장 <strong>RSS 피드 집합</strong> 구성(구체 URL은 구현에서 관리, 변경 가능).</li>
+      <li>LangGraph: 수집 → 점수화 → 조건부 확장(루프) → 한국어 메타 정규화 → ReAct 요약 서브그래프.</li>
+      <li>도구: 수집된 기사 목록·사용자 프로필 조회 등(상태 주입 패턴).</li>
+      <li>UI: 기사 제목(외부 링크)·짧은 요약, AI 요약, 분기 안내, 타임라인(접기).</li>
+    </ul>
+    <h3>5.2 비목표 (MVP 제외)</h3>
+    <ul>
+      <li>사용자 계정·로그인·멀티 테넌트.</li>
+      <li>DB 영속화, 즐겨찾기 동기화.</li>
+      <li>이메일·푸시 리포트.</li>
+      <li>특정 유료 뉴스 API를 MVP <strong>필수</strong> 경로로 두지 않음(RSS 기본, NewsAPI는 선택).</li>
+    </ul>
+
+    <h3>5.3 외부 연동 API (구현 명세)</h3>
+    <p>환경 변수·엔드포인트·역할을 아래에 고정합니다. 키는 저장소에 커밋하지 않습니다.</p>
+    <table>
+      <thead>
+        <tr><th>구분</th><th>환경 변수</th><th>엔드포인트 / 동작</th><th>용도</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>OpenAI</strong></td>
+          <td><code>OPENAI_API_KEY</code></td>
+          <td>Chat Completions (<code>gpt-5-mini</code>)</td>
+          <td>한국어 메타 정규화, ReAct 추론·도구 라우팅 (필수)</td>
+        </tr>
+        <tr>
+          <td><strong>NewsAPI.org</strong></td>
+          <td><code>NEWS_API_KEY</code> (호환: <code>NEWSAPI_API_KEY</code>)</td>
+          <td><code>GET https://newsapi.org/v2/top-headlines</code> · <code>category=technology</code>, <code>language=en</code>, <code>pageSize</code>는 <code>streamlit_app.config.NEWSAPI_PAGE_SIZE</code></td>
+          <td>RSS와 동일 스키마로 기사 병합 (선택 · 키 없으면 생략)</td>
+        </tr>
+        <tr>
+          <td><strong>인프런 (Inflearn)</strong></td>
+          <td>(없음)</td>
+          <td>공개 범용 API 미사용. 로컬 큐레이션 <code>streamlit_app/data/inflearn_catalog.json</code> + <code>https://www.inflearn.com/courses?search=...</code> 검색 딥링크</td>
+          <td>ReAct 도구 출력만 답변에 인용; 무단 스크래핑·가짜 URL 생성 금지</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>5.4 ReAct 에이전트 도구 (LangChain <code>@tool</code>)</h3>
+    <p>모두 <strong>InjectedState</strong>로 <code>NewsAgentState</code>를 읽습니다. 프롬프트에서 호출 순서·출력 인용 규칙을 고정합니다.</p>
+    <table>
+      <thead>
+        <tr><th>도구명</th><th>입력</th><th>반환</th><th>비고</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>get_ranked_headlines</code></td>
+          <td><code>top_n</code> (기본 12)</td>
+          <td>관련도 순 기사 제목·URL·요약 스니펫</td>
+          <td>최종 요약의 기사 링크는 이 출력에 있어야 함</td>
+        </tr>
+        <tr>
+          <td><code>get_user_interest_profile</code></td>
+          <td>(상태만)</td>
+          <td>역할·스택·토픽 텍스트</td>
+          <td>맞춤 요약·추천 근거</td>
+        </tr>
+        <tr>
+          <td><code>get_inflearn_learning_suggestions</code></td>
+          <td><code>max_courses</code> (기본 5)</td>
+          <td>큐레이션 매칭 강의 목록 + 프로필 기반 검색 링크 최대 3개</td>
+          <td>인프런 URL·검색 URL은 본 문자열만 인용; 환각 URL 금지</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>6. 기능 요구사항</h2>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>요구사항</th><th>우선순위</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>FR-1</td><td>사이드바에서 역할·스택·토픽(구조화) 입력 및 실행 트리거</td><td>P0</td></tr>
+        <tr><td>FR-2</td><td>설정된 RSS URL에서 기사 메타데이터 수집(제목·링크·요약 스니펫 등)</td><td>P0</td></tr>
+        <tr><td>FR-3</td><td>프로필 토큰과 기사 텍스트 기반 관련도 산출 및 기사 정렬</td><td>P0</td></tr>
+        <tr><td>FR-4</td><td>최고 관련도가 임계값 미만이고 아직 확장 전이면 추가 피드 병합 후 재수집(그래프 루프)</td><td>P0</td></tr>
+        <tr><td>FR-4b</td><td>요약 단계 전 상위 기사에 대해 한국어 제목·요약으로 표시용 메타를 정규화(일관된 사용자 경험)</td><td>P0</td></tr>
+        <tr><td>FR-5</td><td>ReAct: OpenAI 채팅 모델로 도구 호출 루프, 한국어 최종 요약</td><td>P0</td></tr>
+        <tr><td>FR-6</td><td>분기 발생 시 사용자에게 이유(한국어) 표시</td><td>P0</td></tr>
+        <tr><td>FR-7</td><td>도구 호출·수집 단계 로그를 UI에 노출(최소 JSON/타임라인)</td><td>P0</td></tr>
+        <tr><td>FR-8</td><td>기사 목록: 제목 클릭 시 원문 URL 새 탭, 짧은 요약만 기본 노출</td><td>P1</td></tr>
+        <tr><td>FR-9</td><td><code>NEWS_API_KEY</code>가 있으면 NewsAPI technology 헤드라인을 RSS 수집 결과와 병합·중복 제거</td><td>P1</td></tr>
+        <tr><td>FR-10</td><td>ReAct가 인프런 학습 제안 시 큐레이션·검색 링크 도구 출력만 인용(FR-5 하위)</td><td>P1</td></tr>
+      </tbody>
+    </table>
+
+    <h2>7. 비기능 요구사항</h2>
+    <ul>
+      <li><strong>모델:</strong> 채팅은 <code>gpt-5-mini</code> 고정. 샘플링 파라미터 <code>temperature</code> / <code>top_p</code> 미사용(해당 계열 제약).</li>
+      <li><strong>임베딩(선택):</strong> 필요 시 <code>text-embedding-3-small</code> — MVP 점수는 규칙 기반 가능.</li>
+      <li><strong>설정:</strong> <code>OPENAI_API_KEY</code>는 환경 변수 또는 <code>.env</code>(프로젝트 루트·노트북·앱 디렉터리 등 합의된 경로).</li>
+      <li><strong>신뢰성:</strong> 개별 피드 실패 시 가능한 한 나머지 피드로 계속, 오류는 로그에 반영.</li>
+      <li><strong>보안:</strong> API 키는 저장소에 커밋하지 않음.</li>
+    </ul>
+
+    <h2>8. 데이터 · 상태 (온톨로지 요약)</h2>
+    <table>
+      <thead>
+        <tr><th>개념</th><th>설명</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>user_profile</td><td>역할, 스택, 토픽 등 구조화 필드</td></tr>
+        <tr><td>feed_urls</td><td>현재 실행에서 사용 중인 RSS URL 목록(확장 분기 후 갱신)</td></tr>
+        <tr><td>articles</td><td>수집·중복 제거·정렬된 기사 리스트(전처리 후 한국어 메타)</td></tr>
+        <tr><td>article_scores</td><td>기사(링크)별 관련도</td></tr>
+        <tr><td>scope_expanded</td><td>피드 확장 루프가 이미 수행되었는지 여부(분기 판단)</td></tr>
+        <tr><td>branch_events</td><td>분기 유형·한국어 설명</td></tr>
+        <tr><td>tool_trace</td><td>워크플로 단계별 로그</td></tr>
+        <tr><td>messages</td><td>ReAct 대화·도구 메시지</td></tr>
+      </tbody>
+    </table>
+
+    <h2>9. 수용 기준 (Acceptance Criteria)</h2>
+    <ul>
+      <li>단일 Streamlit 엔트리로 앱이 기동된다.</li>
+      <li>실행 시 RSS에서 기사가 수집되고, 관련도에 따라 확장 분기와 수집 루프가 0 또는 1회 발생할 수 있다.</li>
+      <li>최종 화면에 한국어 요약과 기사 링크·한국어 위주 짧은 요약이 보인다.</li>
+      <li>저매칭 확장이 일어나면 사용자에게 그 이유가 표시된다.</li>
+      <li>ReAct 구간의 도구 사용이 타임라인으로 확인 가능하다.</li>
+      <li>PRD 2절에 기술한 그래프 토폴로지와 구현이 정합적이다(노드·분기·루프).</li>
+    </ul>
+
+    <h2>10. 평가 원칙 (품질)</h2>
+    <table>
+      <thead>
+        <tr><th>원칙</th><th>설명</th><th>가중</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>관련성</td><td>요약이 프로필과 연결되는가</td><td>0.35</td></tr>
+        <tr><td>근거</td><td>주장이 주어진 기사·출처에 맞는가</td><td>0.30</td></tr>
+        <tr><td>분기 명확성</td><td>저매칭 시 사용자가 맥락을 이해하는가</td><td>0.20</td></tr>
+        <tr><td>운영성</td><td>피드 오류·빈 결과에 대한 대응</td><td>0.15</td></tr>
+      </tbody>
+    </table>
+
+    <h2>11. 잔여 결정 사항 · 리스크</h2>
+    <div class="note">
+      <strong>열린 결정:</strong> RSS 화이트리스트·갱신 주기, 매칭 임계값·점수 정의(규칙 vs 임베딩),
+      확장 시 정책(추가 피드만 / 기간·키워드 완화 등)의 세부 규칙.
+    </div>
+    <ul>
+      <li><strong>리스크:</strong> RSS 제공처 변경·차단 → 피드 목록 유지보수 필요.</li>
+      <li><strong>리스크:</strong> LLM 환각 → 도구로 근거 확인 및 UI에 출처 노출.</li>
+    </ul>
+
+    <h2>12. 기술 스택 (참고)</h2>
+    <ul>
+      <li>Python, Streamlit, LangGraph, LangChain, langchain-openai, httpx(RSS HTTP).</li>
+      <li>배포: 로컬 실행 기준 MVP; 클라우드 배포는 후속.</li>
+    </ul>
+
+    <p class="footer">
+      본 PRD는 인터뷰·Seed(목표·제약·분기/반복 그래프 기획·수용 기준·온톨로지·평가)에 정렬되었습니다.
+      구현 저장소: <code>410ai/streamlit_app</code> 기준.
+    </p>
+  </article>
+</body>
+</html>

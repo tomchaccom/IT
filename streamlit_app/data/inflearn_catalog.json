@@ -1,0 +1,52 @@
+{
+  "courses": [
+    {
+      "title": "풀스택을 위한 도커와 최신 서버 기술(리눅스, nginx, AWS, HTTPS, Let’s encrypt)",
+      "url": "https://www.inflearn.com/course/%EB%8F%84%EC%BB%A4",
+      "tags": ["docker", "devops", "nginx", "aws", "linux", "backend"],
+      "note": "큐레이션 예시 — 실제 강의 URL은 인프런에서 확인 후 교체"
+    },
+    {
+      "title": "실전! 스프링 부트와 JPA 활용1",
+      "url": "https://www.inflearn.com/course/spring-boot-jpa-1",
+      "tags": ["spring", "java", "jpa", "backend", "rest"],
+      "note": ""
+    },
+    {
+      "title": "모든 개발자의 실무를 위한 올인원 기본기",
+      "url": "https://www.inflearn.com/course/git-github-practical",
+      "tags": ["git", "github", "실무", "협업"],
+      "note": ""
+    },
+    {
+      "title": "ChatGPT API 활용을 통한 업무 자동화",
+      "url": "https://www.inflearn.com/course/chatgpt-api",
+      "tags": ["llm", "openai", "api", "자동화", "python"],
+      "note": ""
+    },
+    {
+      "title": "LangChain으로 배우는 LLM 애플리케이션 개발",
+      "url": "https://www.inflearn.com/course/langchain",
+      "tags": ["langchain", "llm", "python", "rag", "에이전트"],
+      "note": ""
+    },
+    {
+      "title": "FastAPI 완전정복 마스터class",
+      "url": "https://www.inflearn.com/course/fastapi",
+      "tags": ["fastapi", "python", "backend", "api"],
+      "note": ""
+    },
+    {
+      "title": "React: The Road to Enterprise",
+      "url": "https://www.inflearn.com/course/react-road-to-enterprise",
+      "tags": ["react", "typescript", "frontend", "spa"],
+      "note": ""
+    },
+    {
+      "title": "혼자 공부하는 머신러닝 + 딥러닝",
+      "url": "https://www.inflearn.com/course/homl",
+      "tags": ["ml", "딥러닝", "tensorflow", "pytorch", "python"],
+      "note": ""
+    }
+  ]
+}
